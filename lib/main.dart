@@ -1,203 +1,73 @@
-import 'package:english_words/english_words.dart';
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+
+import 'data.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const DocumentApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class DocumentApp extends StatelessWidget {
+  const DocumentApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => MyAppState(),
-      child: MaterialApp(
-        title: 'Namer App',
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepOrange),
-        ),
-        home: MyHomePage(),
-      ),
+    return MaterialApp(
+      theme: ThemeData(useMaterial3: true),
+      home: DocumentScreen(document: Document()),
     );
   }
 }
 
-class MyAppState extends ChangeNotifier {
-  var current = WordPair.random();
-  var favorites = <WordPair>[];
+class BlockWidget extends StatelessWidget {
+  final Block block;
 
-  void getNext() {
-    current = WordPair.random();
-    notifyListeners();
-  }
+  const BlockWidget({required this.block, super.key});
 
-  void toggleFavorite() {
-    if (favorites.contains(current)) {
-      favorites.remove(current);
-    } else {
-      favorites.add(current);
-    }
-    notifyListeners();
-  }
-}
-
-class FavoritePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
-    return Center(
-      child: ListView(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Text('You have ${appState.favorites.length} favorites:'),
-          ),
-          for (var pair in appState.favorites)
-            ListTile(
-              title: Text(
-                pair.asLowerCase,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              leading: Icon(Icons.favorite),
-            ),
-        ],
-      ),
+    TextStyle? textStyle;
+    switch (block.type) {
+      case 'h1':
+        textStyle = Theme.of(context).textTheme.titleLarge;
+      case 'p' || 'checkbox':
+        textStyle = Theme.of(context).textTheme.bodyLarge;
+      case _:
+        textStyle = Theme.of(context).textTheme.bodyMedium;
+    }
+
+    return Container(
+      margin: const EdgeInsets.all(8),
+      child: Text(block.text, style: textStyle),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
+class DocumentScreen extends StatelessWidget {
+  final Document document;
 
-class _MyHomePageState extends State<MyHomePage> {
-  var selectedIndex = 0;
+  const DocumentScreen({required this.document, super.key});
 
   @override
   Widget build(BuildContext context) {
-    Widget page;
-    switch (selectedIndex) {
-      case 0:
-        page = GeneratorPage();
-        break;
-      case 1:
-        page = FavoritePage();
-        break;
-      default:
-        throw UnimplementedError('no widget for $selectedIndex');
-    }
+    final (title, :modified) = document.metadata;
+    final blockList = document.getBlocks();
 
-    return LayoutBuilder(builder: (context, constraints) {
-      return Scaffold(
-        body: Row(
-          children: [
-            SafeArea(
-              child: NavigationRail(
-                extended: constraints.maxWidth >= 600,
-                destinations: [
-                  NavigationRailDestination(
-                    icon: Icon(Icons.home),
-                    label: Text('Home'),
-                  ),
-                  NavigationRailDestination(
-                    icon: Icon(Icons.favorite),
-                    label: Text('Favorites'),
-                  ),
-                ],
-                selectedIndex: selectedIndex,
-                onDestinationSelected: (value) {
-                  setState(() {
-                    selectedIndex = value;
-                  });
-                },
-              ),
-            ),
-            Expanded(
-              child: Container(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                child: page,
-              ),
-            ),
-          ],
-        ),
-      );
-    });
-  }
-}
-
-class GeneratorPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
-    var pair = appState.current;
-
-    IconData icon;
-    if (appState.favorites.contains(pair)) {
-      icon = Icons.favorite;
-    } else {
-      icon = Icons.favorite_border;
-    }
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+    return Scaffold(
+      appBar: AppBar(title: Center(child: Text(title))),
+      body: Column(
         children: [
-          BigCard(pair: pair),
-          SizedBox(height: 10),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ElevatedButton.icon(
-                onPressed: () {
-                  appState.toggleFavorite();
-                },
-                icon: Icon(icon),
-                label: Text('Like'),
-              ),
-              SizedBox(width: 10),
-              ElevatedButton(
-                onPressed: () {
-                  appState.getNext();
-                },
-                child: Text('Next'),
-              ),
-            ],
+          Center(child: Text('Last modified: $modified')),
+          Expanded(
+            child: ListView.builder(
+              itemCount: blockList.length,
+              itemBuilder: (context, index) {
+                return BlockWidget(block: blockList[index]);
+              },
+            ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class BigCard extends StatelessWidget {
-  const BigCard({
-    super.key,
-    required this.pair,
-  });
-
-  final WordPair pair;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final style = theme.textTheme.displayMedium!.copyWith(
-      color: theme.colorScheme.onPrimary,
-    );
-    return Card(
-      elevation: 8,
-      color: theme.colorScheme.secondary,
-      // margin: const EdgeInsets.only(top: 50.0),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Text(
-          pair.asLowerCase,
-          style: style,
-          semanticsLabel: "${pair.first} ${pair.second}",
-        ),
       ),
     );
   }
