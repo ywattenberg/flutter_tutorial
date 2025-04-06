@@ -24,26 +24,34 @@ class Document {
   }
 }
 
-class Block {
-  final String type;
-  final String text;
-  final bool checked;
-
-  Block(this.type, this.text, this.checked);
+sealed class Block {
+  Block();
 
   factory Block.fromJson(Map<String, dynamic> json) {
-    if (json case {
-      'type': String type,
-      'text': String text,
-      'checked': bool checked,
-    }) {
-      return Block(type, text, checked);
-    } else if (json case {'type': String type, 'text': String text}) {
-      return Block(type, text, false);
-    } else {
-      throw const FormatException('Unexpected JSON');
-    }
+    return switch (json) {
+      {'type': 'h1', 'text': String text} => HeaderBlock(text),
+      {'type': 'p', 'text': String text} => ParagraphBlock(text),
+      {'type': 'checkbox', 'text': String text, 'checked': bool checked} =>
+        CheckboxBlock(text, checked),
+      _ => throw const FormatException('Unexpected JSON Format!'),
+    };
   }
+}
+
+class HeaderBlock extends Block {
+  final String text;
+  HeaderBlock(this.text);
+}
+
+class ParagraphBlock extends Block {
+  final String text;
+  ParagraphBlock(this.text);
+}
+
+class CheckboxBlock extends Block {
+  final String text;
+  final bool isChecked;
+  CheckboxBlock(this.text, this.isChecked);
 }
 
 const documentJson = '''
@@ -63,7 +71,7 @@ const documentJson = '''
     },
     {
       "type": "checkbox",
-      "checked": false,
+      "checked": true,
       "text": "Learn Dart 3"
     }
   ]

@@ -27,21 +27,39 @@ class BlockWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    TextStyle? textStyle;
-    switch (block.type) {
-      case 'h1':
-        textStyle = Theme.of(context).textTheme.titleLarge;
-      case 'p' || 'checkbox':
-        textStyle = Theme.of(context).textTheme.bodyLarge;
-      case _:
-        textStyle = Theme.of(context).textTheme.bodyMedium;
-    }
-
-    return Container(
-      margin: const EdgeInsets.all(8),
-      child: Text(block.text, style: textStyle),
-    );
+    return switch (block) {
+      HeaderBlock(:final text) => Text(
+        text,
+        style: Theme.of(context).textTheme.displayLarge,
+      ),
+      ParagraphBlock(:final text) => Text(
+        text,
+        style: Theme.of(context).textTheme.bodyLarge,
+      ),
+      CheckboxBlock(:final text, :final isChecked) => Row(
+        children: [
+          Checkbox(value: isChecked, onChanged: (_) {}),
+          Text(text, style: Theme.of(context).textTheme.bodyMedium),
+        ],
+      ),
+    };
   }
+}
+
+String formatTime(DateTime dateTime) {
+  final now = DateTime.now();
+  final difference = now.difference(dateTime);
+
+  return switch (difference) {
+    Duration(inDays: 0) => 'Today',
+    Duration(inDays: 1) => 'Tomorrow',
+    Duration(inDays: -1) => 'Yesterday',
+    Duration(inDays: final days) when days > 7 => '${days ~/ 7} weeks ago',
+    Duration(inDays: final days) when days < -7 =>
+      '${days ~/ 7} weeks from now',
+    Duration(inDays: final days, isNegative: true) => '${days.abs()} days ago',
+    Duration(inDays: final days) => '${days.abs()} days from now',
+  };
 }
 
 class DocumentScreen extends StatelessWidget {
@@ -58,7 +76,7 @@ class DocumentScreen extends StatelessWidget {
       appBar: AppBar(title: Center(child: Text(title))),
       body: Column(
         children: [
-          Center(child: Text('Last modified: $modified')),
+          Center(child: Text('Last modified: ${formatTime(modified)}')),
           Expanded(
             child: ListView.builder(
               itemCount: blockList.length,
